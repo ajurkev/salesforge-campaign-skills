@@ -1,0 +1,17 @@
+# Caches (contain workspace-specific IDs)
+sender-cache.md
+contact-cache.md
+mailbox-cache.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+temp_*.txt
