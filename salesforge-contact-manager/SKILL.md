@@ -19,11 +19,53 @@ Ask user for contact source:
 
 | Source | Action |
 |---|---|
-| **CSV file** | Read file, map columns to Salesforge fields |
-| **Clay export** | Map Clay columns (usually pre-enriched) |
+| **Local CSV file** | User provides a file path. Read with Read tool, auto-detect columns. |
+| **Clay export (CSV)** | User provides Clay export path or pastes Clay table URL. Columns are pre-enriched — map directly. |
 | **Apollo export** | Map Apollo fields to Salesforge format |
 | **Manual paste** | Parse structured text (name, email, company) |
 | **Leadsforge search** | Search and import directly |
+
+#### Local CSV Import
+
+If user provides a file path (e.g., `/path/to/leads.csv`):
+1. Read the file with the Read tool
+2. Parse headers from first row
+3. Auto-detect column mapping by matching header names to Salesforge fields (see Step 2)
+4. Show detected mapping to user for confirmation
+5. Count rows and report: "Found [N] contacts in [filename]"
+
+```
+Example:
+User: "import contacts from /Users/artyom/clients/galley/lists/galley-tier1.csv"
+→ Read file → detect headers → map → validate → import
+```
+
+#### Clay Export Import
+
+Clay exports come as CSV with enriched columns. Two input methods:
+
+**Method A — Local file:**
+User exports from Clay to CSV, provides local path. Same flow as Local CSV but with Clay-specific column names:
+
+| Clay Column | Salesforge Field |
+|---|---|
+| First Name | first_name |
+| Last Name | last_name |
+| Work Email / Email | email |
+| Company Name / Company | company |
+| Job Title / Title | job_title |
+| LinkedIn URL / Person LinkedIn URL | linkedin_url |
+| Phone / Work Phone | phone |
+| (any other column) | custom variable |
+
+**Method B — Paste from Clay:**
+User copies rows from Clay table. Parse tab-separated or comma-separated text. First row = headers.
+
+**Clay-specific handling:**
+- Clay often has multiple email columns (Work Email, Personal Email, Email 1, Email 2) — ask user which to use as primary
+- Clay enrichment columns (company size, tech stack, funding) → map as custom variables
+- Clay "AI Generated" columns (first lines, personalization) → map as custom variables
+- Skip Clay system columns (Row ID, Created At, etc.)
 
 ---
 
