@@ -76,4 +76,4 @@ MIT
 
 ---
 
-Built by [RevSculpt](https://revsculpt.com)
+Built by [RevSculpt](https://revsculpt.com) — part of [Pipeclaw](https://pipeclaw.ai), the AI-native outbound orchestration and execution agent.
