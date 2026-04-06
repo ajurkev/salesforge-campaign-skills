@@ -66,8 +66,8 @@ All endpoints come from the official [Salesforge API v2 Swagger spec](https://ap
 |-------|--------|
 | Phase 1: Reference + Sequence Creator + Enrollment | ✅ Built |
 | Phase 2: Contact Manager + Deliverability | ✅ Built |
-| Phase 3: Leadsforge Search + Enrichment | 🔜 Planned |
-| Phase 4: Infraforge DNS + Domain Setup | 🔜 Planned |
+| Phase 3: Lead Search + Enrichment | 🔜 Planned |
+| Phase 4: DNS + Domain Setup | 🔜 Planned |
 | Phase 5: Analytics + Reporting | 🔜 Planned |
 
 ## License

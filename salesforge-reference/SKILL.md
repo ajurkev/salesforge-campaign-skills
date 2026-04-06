@@ -488,20 +488,19 @@ Get single webhook.
 
 ---
 
-## Key Differences from EmailBison
+## Key Salesforge API Traits
 
-| Feature | EmailBison | Salesforge |
-|---|---|---|
-| API structure | Single API base | Dual API (core + multichannel) |
-| Steps model | Linear steps array | Node-based (actions + conditions + branches) |
-| Schedule format | "HH:MM" strings | Integer hours (0-23) |
-| Pagination | `page` + `per_page` | Core: `limit`+`offset` / MC: `page`+`limit` |
-| Auth header | Bearer token via MCP | `Authorization: <API_KEY>` direct |
-| Sender attachment | `sender_email_ids` | `senderProfileIds` (profiles, not individual emails) |
-| Sequence status | resume/pause campaign | draft → active → paused → completed |
-| Thread replies | `thread_reply: true` on step | Handled via node configuration |
-| A/B variants | `variant: true` on step | `variants` array on action node |
-| Multichannel | Email only | Email + LinkedIn actions |
+| Feature | How It Works |
+|---|---|
+| API structure | Dual API (core + multichannel) |
+| Steps model | Node-based (actions + conditions + branches) |
+| Schedule format | Integer hours (0-23), not "HH:MM" strings |
+| Pagination | Core: `limit`+`offset` / Multichannel: `page`+`limit` |
+| Auth | `Authorization: <API_KEY>` header |
+| Sender attachment | `senderProfileIds` (profiles, not individual mailboxes) |
+| Sequence status | draft → active → paused → completed |
+| A/B variants | `variants` array on action node |
+| Multichannel | Email + LinkedIn actions |
 
 ---
 

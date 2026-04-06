@@ -1,6 +1,6 @@
 ---
 name: salesforge-health
-description: Check mailbox warmup status via Warmforge, monitor sender reputation, run placement tests, and recommend warmup duration before sending. Use before launching sequences to ensure deliverability.
+description: Check mailbox warmup status, monitor sender reputation, run placement tests, and recommend warmup duration before sending. Use before launching sequences to ensure deliverability.
 ---
 
 # Salesforge Deliverability Checker
@@ -166,7 +166,7 @@ Cache expires after 3 days — re-check automatically.
 
 | Error | Response |
 |---|---|
-| Cannot reach Warmforge API | Fall back to manual dashboard check — tell user to verify in Salesforge UI |
+| Cannot reach warmup API | Fall back to manual dashboard check — tell user to verify in Salesforge UI |
 | DNS lookup fails | Try alternative DNS resolver (8.8.8.8, 1.1.1.1) |
 | Mailbox suspended | Flag immediately — do not attach to sequence |
 | Blacklist detected | Pause all sequences using that IP/domain, alert user |

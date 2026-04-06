@@ -5,7 +5,7 @@ description: Import, enrich, validate contacts for Salesforge sequences. Manage 
 
 # Salesforge Contact Manager
 
-Import contacts, enrich with Leadsforge, validate emails, and manage DNC lists.
+Import contacts, validate emails, and manage DNC lists.
 
 > **Before proceeding:** Invoke the `salesforge` reference skill to load API rules and field mappings.
 
@@ -23,7 +23,7 @@ Ask user for contact source:
 | **Clay export (CSV)** | User provides Clay export path or pastes Clay table URL. Columns are pre-enriched — map directly. |
 | **Apollo export** | Map Apollo fields to Salesforge format |
 | **Manual paste** | Parse structured text (name, email, company) |
-| **Leadsforge search** | Search and import directly |
+| **Salesforge search** | Search and import directly |
 
 #### Local CSV Import
 
@@ -137,11 +137,11 @@ Ask user to confirm before proceeding.
 
 ### Step 5 — Enrichment (Optional)
 
-If user requests enrichment via Leadsforge:
+If user requests enrichment via Salesforge:
 
 ```
 1. For each contact missing key fields:
-   - POST /leadsforge/enrich ⚠️ (endpoint unconfirmed)
+   - Use Salesforge enrichment API (endpoint TBD)
    - Fields to enrich: email, phone, linkedin_url, company size, industry
 
 2. Cost estimation before running:

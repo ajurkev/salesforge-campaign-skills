@@ -75,7 +75,7 @@ The ORIGINAL sentence must appear as option 1. Exactly 4 options total.
 - Thread-reply subjects → NOT spintaxed
 - Do NOT spin: lines of 3 words or fewer, greeting lines (just salutation + name), variable-only lines, specific data/percentages, P.S. lines with metrics
 
-⚠️ **Spintax format note:** Default to Bison-style `{opt1 | opt2 | opt3}` until Salesforge's native format is confirmed. If Salesforge uses a different format, convert at Step 5.
+**Spintax format:** `{opt1 | opt2 | opt3}` — single curly braces, pipe-separated. If Salesforge uses a different format, convert at Step 5.
 
 ---
 
