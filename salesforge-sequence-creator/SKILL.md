@@ -208,20 +208,41 @@ After approval:
 7. Create email nodes (one per step)
    POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions
 
+   CRITICAL: actionId and branchId are INTEGERS, not strings.
+   Variants use a nested metadata object — NOT flat subject/body fields.
+
    For each email step:
    {
-     "actionId": "[email action ID from step 5]",
-     "branchId": "[branch ID from step 6]",
-     "waitDays": [delay in days],
+     "actionId": 123,          ← INTEGER from step 5
+     "branchId": 456,          ← INTEGER from step 6
+     "waitDays": 0,            ← INTEGER, 0 = send immediately
+     "distributionStrategy": "equal",
      "variants": [
-       {"subject": "[spintaxed subject]", "body": "<p>HTML body</p>"}
+       {
+         "isEnabled": true,
+         "exposureInPercentage": 100,
+         "metadata": {
+           "name": "Variant A",
+           "subject": "[spintaxed subject line]",
+           "message": "<p>HTML body here</p>"
+         }
+       }
      ]
    }
 
+   FIELD MAPPING:
+   - Email body goes in variants[].metadata.message (NOT "body")
+   - Subject goes in variants[].metadata.subject
+   - For A/B tests: add multiple objects to variants[], set exposureInPercentage to split (e.g. 50/50)
+   - isEnabled must be true for the variant to send
+
+   WAIT DAYS:
    Step 1: waitDays=0 (send immediately on enrollment)
-   Step 2: waitDays=2-3 (reply thread)
-   Step 3: waitDays=3-4 (new thread)
-   Step 4: waitDays=2-3 (reply thread)
+   Step 2: waitDays=2-3
+   Step 3: waitDays=3-4
+   Step 4: waitDays=2-3
+
+   NOTE: To update wait time after creation, use PATCH with wait_in_minutes (not waitDays)
 
 8. Set schedule
    PUT /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/schedule

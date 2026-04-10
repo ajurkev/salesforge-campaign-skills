@@ -103,13 +103,11 @@ List custom variables. Query: `limit`, `offset`.
 Bulk create DNC entries. Body:
 ```json
 {
-  "dncs": [
-    {"email": "user@example.com"},
-    {"domain": "example.com"}
-  ]
+  "dncs": ["user@example.com", "example.com"]
 }
 ```
-**Limit:** 1-1000 entries per call. Returns created count. 201.
+**CRITICAL:** `dncs` is **string[]** (plain email addresses or domains), NOT objects.
+**Limit:** 1-1000 entries per call. Returns `{"created": N}`. 201.
 
 ---
 
@@ -158,10 +156,10 @@ Create sequence. Body:
 {
   "name": "string (REQUIRED)",
   "description": "string",
-  "timezone": "string"
+  "timezone": "string (REQUIRED, IANA format e.g. America/New_York)"
 }
 ```
-Returns 201 with sequence ID.
+**Both `name` and `timezone` are required.** Returns 201 with sequence ID (integer).
 
 ### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}
 Get sequence details.
@@ -202,22 +200,56 @@ List all nodes in a sequence. Query: `type` (action|condition|root|terminal), `c
 Create action node (email step). Body:
 ```json
 {
-  "actionId": "string (REQUIRED)",
-  "branchId": "string (REQUIRED)",
+  "actionId": 123,
+  "branchId": 456,
   "waitDays": 0,
-  "distributionStrategy": "string",
+  "distributionStrategy": "equal",
   "variants": [
     {
-      "subject": "string",
-      "body": "string"
+      "isEnabled": true,
+      "exposureInPercentage": 100,
+      "metadata": {
+        "name": "Variant A",
+        "subject": "your subject line here",
+        "message": "<p>HTML email body here</p>",
+        "allowed_validation_statuses": ["safe", "catch_all"]
+      }
     }
   ]
 }
 ```
+**CRITICAL TYPES:**
+- `actionId`: **integer** (NOT string) — get from GET /multichannel/actions
+- `branchId`: **integer** (NOT string) — get from GET .../branches
+- `waitDays`: **integer** (0 = send immediately)
+- `distributionStrategy`: "equal" or "custom"
+- `variants[].exposureInPercentage`: integer 0-100 (must sum to 100 across variants)
+- `variants[].metadata.message`: the email body (NOT "body")
+- `variants[].metadata.subject`: the subject line
+
 Returns 201.
 
 ### PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions/{nodeID}
-Update action node (change subject, body, wait days, variants).
+Update action node. Body:
+```json
+{
+  "wait_in_minutes": 4320,
+  "distributionStrategy": "equal",
+  "variants": [
+    {
+      "id": 789,
+      "isEnabled": true,
+      "exposureInPercentage": 100,
+      "metadata": {
+        "name": "Variant A",
+        "subject": "updated subject",
+        "message": "<p>updated body</p>"
+      }
+    }
+  ]
+}
+```
+**NOTE:** Update uses `wait_in_minutes` (NOT waitDays). 1 day = 1440 minutes.
 
 ### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/conditions
 Create condition node. Body:
@@ -287,9 +319,10 @@ List sender profiles attached to a sequence.
 Attach sender profiles to sequence. Body:
 ```json
 {
-  "senderProfileIds": ["id1", "id2"]
+  "senderProfileIds": [1, 2, 3]
 }
 ```
+**CRITICAL:** `senderProfileIds` is **integer[]**, NOT string[].
 **Minimum:** 1 sender profile required.
 
 ### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles/remove
@@ -494,13 +527,20 @@ Get single webhook.
 |---|---|
 | API structure | Dual API (core + multichannel) |
 | Steps model | Node-based (actions + conditions + branches) |
+| IDs | `actionId`, `branchId`, `senderProfileIds` are all **integers** |
+| Email body field | `variants[].metadata.message` (NOT "body") |
+| Subject field | `variants[].metadata.subject` |
+| Create wait | `waitDays` (integer, days) |
+| Update wait | `wait_in_minutes` (integer, minutes — 1 day = 1440) |
 | Schedule format | Integer hours (0-23), not "HH:MM" strings |
 | Pagination | Core: `limit`+`offset` / Multichannel: `page`+`limit` |
 | Auth | `Authorization: <API_KEY>` header |
-| Sender attachment | `senderProfileIds` (profiles, not individual mailboxes) |
+| Sender attachment | `senderProfileIds` (integer[], profiles not mailboxes) |
 | Sequence status | draft → active → paused → completed |
-| A/B variants | `variants` array on action node |
-| Multichannel | Email + LinkedIn actions |
+| A/B variants | `variants` array with `isEnabled`, `exposureInPercentage`, nested `metadata` |
+| DNC format | `dncs: string[]` (plain emails/domains, not objects) |
+| Timezone | IANA format required (e.g. "America/New_York") |
+| Multichannel | Email + LinkedIn + InMail actions |
 
 ---
 
