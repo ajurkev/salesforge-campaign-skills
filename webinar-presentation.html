@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>50 Campaigns in One Day — Claude Code + Salesforge</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --bg: #0e1f22;
+    --card: #171719;
+    --border: #272729;
+    --text: #d9d9d9;
+    --muted: #948f91;
+    --white: #fcfbf4;
+    --accent: #c1c0a8;
+    --accent2: #64825b;
+    --red: #c45c5c;
+    --blue: #09f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Helvetica Neue', 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .slide {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    padding: 60px 80px;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .slide.active { display: flex; }
+
+  .slide-number {
+    position: fixed;
+    bottom: 20px;
+    right: 40px;
+    font-size: 14px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    transition: width 0.3s ease;
+  }
+
+  h1 {
+    font-size: 56px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -2px;
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+
+  h1 .accent { color: var(--accent); }
+  h1 .accent2 { color: var(--accent2); }
+
+  h2 {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--white);
+    letter-spacing: -1px;
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 14px;
+  }
+
+  p, li {
+    font-size: 22px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 24px;
+    color: var(--muted);
+    font-weight: 300;
+    margin-bottom: 40px;
+  }
+
+  ul { list-style: none; margin-top: 16px; }
+  ul li { padding: 8px 0; padding-left: 24px; position: relative; }
+  ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent); }
+
+  .big-number {
+    font-size: 120px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: -4px;
+    line-height: 1;
+  }
+
+  .big-number .unit {
+    font-size: 48px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 60px;
+    margin-top: 40px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat .value {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--white);
+  }
+
+  .stat .label {
+    font-size: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .stat .delta {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+  }
+
+  th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    font-size: 18px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .code-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    color: var(--accent2);
+    line-height: 1.8;
+    margin-top: 24px;
+    overflow-x: auto;
+  }
+
+  .code-block .comment { color: var(--muted); }
+  .code-block .keyword { color: var(--accent); }
+  .code-block .string { color: var(--accent2); }
+  .code-block .error { color: var(--red); }
+
+  .trap-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-top: 20px;
+  }
+
+  .trap-card .trap-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+
+  .trap-card .wrong {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--red);
+    font-size: 16px;
+    text-decoration: line-through;
+  }
+
+  .trap-card .right {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-size: 16px;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 32px;
+  }
+
+  .comparison .col {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  .comparison .col h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .comparison .col.bad h4 { color: var(--red); }
+  .comparison .col.good h4 { color: var(--accent); }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .badge.live { background: rgba(255,68,68,0.15); color: var(--red); border: 1px solid var(--red); }
+  .badge.demo { background: rgba(200,255,0,0.1); color: var(--accent); border: 1px solid var(--accent); }
+
+  .center { text-align: center; align-items: center; }
+
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 40px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .pipeline-flow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  .pipeline-step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--white);
+  }
+
+  .pipeline-step.active-step {
+    border-color: var(--accent);
+    background: rgba(200,255,0,0.05);
+    color: var(--accent);
+  }
+
+  .pipeline-arrow { color: var(--muted); font-size: 20px; }
+
+  .segment-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .segment-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .segment-cell.hot { border-color: var(--accent); color: var(--accent); }
+  .segment-cell.warm { border-color: var(--blue); color: var(--blue); }
+  .segment-cell.cold { border-color: var(--border); }
+  .segment-cell.dead { border-color: var(--red); color: var(--red); opacity: 0.5; }
+
+  @media print {
+    .slide { display: flex !important; page-break-after: always; height: auto; min-height: 100vh; }
+    body { overflow: visible; }
+    .progress, .slide-number, .bottom-bar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<!-- SLIDE 1: TITLE -->
+<div class="slide active center" data-slide="1">
+  <h3>Salesforge Academy</h3>
+  <h1>50 Multi-channel Sequences<br>in <span class="accent">One Day</span></h1>
+  <p class="subtitle">with Claude Code + Salesforge API</p>
+  <div class="stats-row" style="justify-content: center;">
+    <div class="stat">
+      <div class="value">Artyom Jurkevich</div>
+      <div class="label">Founder, RevSculpt</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: THE PROBLEM -->
+<div class="slide" data-slide="2">
+  <h3>The Problem</h3>
+  <h1>How many campaigns<br>did you launch <span class="accent">last week?</span></h1>
+  <p class="subtitle">And how many hours did it take?</p>
+</div>
+
+<!-- SLIDE 3: THE MATH -->
+<div class="slide" data-slide="3">
+  <h3>The Math</h3>
+  <h2>Manual Campaign Setup</h2>
+  <table>
+    <tr><th>Task</th><th>Per Campaign</th><th>x10 Clients</th><th>x50 Campaigns</th></tr>
+    <tr><td>Write copy + variants</td><td>45 min</td><td>7.5 hrs</td><td>37.5 hrs</td></tr>
+    <tr><td>Spam check + fix</td><td>15 min</td><td>2.5 hrs</td><td>12.5 hrs</td></tr>
+    <tr><td>Create spintax</td><td>20 min</td><td>3.3 hrs</td><td>16.5 hrs</td></tr>
+    <tr><td>Set up in Salesforge</td><td>30 min</td><td>5 hrs</td><td>25 hrs</td></tr>
+    <tr><td>Attach senders + schedule</td><td>10 min</td><td>1.7 hrs</td><td>8.5 hrs</td></tr>
+    <tr><td style="color: var(--accent); font-weight: 700;">TOTAL</td><td style="color: var(--accent); font-weight: 700;">2 hrs</td><td style="color: var(--accent); font-weight: 700;">20 hrs</td><td style="color: var(--red); font-weight: 700;">100 hrs</td></tr>
+  </table>
+</div>
+
+<!-- SLIDE 4: WHAT IF -->
+<div class="slide center" data-slide="4">
+  <h3>What If</h3>
+  <div class="big-number">3 <span class="unit">min</span></div>
+  <h2 style="margin-top: 20px;">instead of 2 hours?</h2>
+  <p class="subtitle">Paste copy → spam fix → spintax → live Salesforge sequence</p>
+</div>
+
+<!-- SLIDE 5: ARCHITECTURE -->
+<div class="slide" data-slide="5">
+  <h3>Architecture</h3>
+  <h2>5 Modular Skills</h2>
+  <table>
+    <tr><th>Skill</th><th>Command</th><th>What It Does</th></tr>
+    <tr><td style="color: var(--accent);">salesforge-reference</td><td><code>/salesforge</code></td><td>API rules, endpoints, defaults — the brain</td></tr>
+    <tr><td style="color: var(--accent);">sequence-creator</td><td><code>/salesforge-sequence</code></td><td>Main pipeline: copy → spam → spintax → API</td></tr>
+    <tr><td style="color: var(--accent);">contact-manager</td><td><code>/salesforge-contacts</code></td><td>Import from CSV or Clay, validate, DNC</td></tr>
+    <tr><td style="color: var(--accent);">enrollment-manager</td><td><code>/salesforge-enroll</code></td><td>Enroll contacts, monitor, pause/resume</td></tr>
+    <tr><td style="color: var(--accent);">deliverability-checker</td><td><code>/salesforge-health</code></td><td>Mailbox warmup, sender reputation</td></tr>
+  </table>
+  <p style="margin-top: 24px; font-size: 16px; color: var(--muted);">Open source: github.com/ajurkev/salesforge-campaign-skills</p>
+</div>
+
+<!-- SLIDE 6: PIPELINE -->
+<div class="slide" data-slide="6">
+  <h3>The Pipeline</h3>
+  <h2>8 Steps. 1 Human Touchpoint.</h2>
+  <div class="pipeline-flow">
+    <div class="pipeline-step">1. Parse</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">2. Spintax</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">3. Spam Check</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">4. Spam Fix</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">5. Variables</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">6. HTML</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step">7. Validate</div><span class="pipeline-arrow">→</span>
+    <div class="pipeline-step active-step">8. YOU APPROVE</div>
+  </div>
+  <p style="margin-top: 32px; font-size: 20px;">Steps 1-7: fully automatic. Step 8: you review. Then API push. <span style="color: var(--accent); font-weight: 700;">Sequence lands in DRAFT.</span></p>
+</div>
+
+<!-- SLIDE 7: LIVE DEMO -->
+<div class="slide center" data-slide="7">
+  <span class="badge live">LIVE DEMO</span>
+  <h1 style="margin-top: 24px;">Let's build a campaign<br>in <span class="accent">3 minutes</span></h1>
+  <p class="subtitle">Freight forwarding event outreach → live Salesforge sequence</p>
+</div>
+
+<!-- SLIDE 8: API TRAPS TITLE -->
+<div class="slide center" data-slide="8">
+  <h3>Lessons Learned</h3>
+  <h1>API Traps That<br>Cost Me <span class="accent">2 Days</span></h1>
+  <p class="subtitle">Things the Swagger docs don't tell you</p>
+</div>
+
+<!-- SLIDE 9: TRAP 1 -->
+<div class="slide" data-slide="9">
+  <h3>Trap #1</h3>
+  <h2>metadata.message, NOT body</h2>
+  <div class="comparison">
+    <div class="col bad">
+      <h4>What you'd expect</h4>
+      <div class="code-block">
+        <span class="error">variants: [{</span><br>
+        &nbsp;&nbsp;<span class="error">subject: "...",</span><br>
+        &nbsp;&nbsp;<span class="error">body: "&lt;p&gt;...&lt;/p&gt;"</span><br>
+        <span class="error">}]</span>
+      </div>
+      <p style="margin-top: 16px; color: var(--red); font-size: 16px;">Returns 200 OK. Email body is empty. Silent failure.</p>
+    </div>
+    <div class="col good">
+      <h4>What actually works</h4>
+      <div class="code-block">
+        <span class="keyword">variants: [{</span><br>
+        &nbsp;&nbsp;<span class="keyword">metadata: {</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">subject: "...",</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="string">message: "&lt;p&gt;...&lt;/p&gt;"</span><br>
+        &nbsp;&nbsp;<span class="keyword">}</span><br>
+        <span class="keyword">}]</span>
+      </div>
+      <p style="margin-top: 16px; color: var(--accent); font-size: 16px;">Body = metadata.message. Not body. Not content.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 10: TRAP 2 -->
+<div class="slide" data-slide="10">
+  <h3>Trap #2</h3>
+  <h2>IDs Are Integers, Not Strings</h2>
+  <table>
+    <tr><th>Field</th><th style="color: var(--red);">Wrong</th><th style="color: var(--accent);">Right</th></tr>
+    <tr><td>actionId</td><td style="color: var(--red); font-family: 'JetBrains Mono';">"123"</td><td style="color: var(--accent); font-family: 'JetBrains Mono';">123</td></tr>
+    <tr><td>branchId</td><td style="color: var(--red); font-family: 'JetBrains Mono';">"456"</td><td style="color: var(--accent); font-family: 'JetBrains Mono';">456</td></tr>
+    <tr><td>senderProfileIds</td><td style="color: var(--red); font-family: 'JetBrains Mono';">["1", "2"]</td><td style="color: var(--accent); font-family: 'JetBrains Mono';">[1, 2]</td></tr>
+  </table>
+  <p style="margin-top: 24px; font-size: 18px;">Strings return 400 or get silently ignored.</p>
+</div>
+
+<!-- SLIDE 11: TRAP 3-5 -->
+<div class="slide" data-slide="11">
+  <h3>Traps #3-5</h3>
+  <div class="trap-card">
+    <div class="trap-title">Trap 3: waitDays vs wait_in_minutes</div>
+    <p>Create: <span style="color: var(--accent); font-family: 'JetBrains Mono';">waitDays: 3</span> (integer, days)<br>
+    Update: <span style="color: var(--accent); font-family: 'JetBrains Mono';">wait_in_minutes: 4320</span> (integer, minutes)</p>
+  </div>
+  <div class="trap-card" style="margin-top: 16px;">
+    <div class="trap-title">Trap 4: Two APIs, Two Pagination Styles</div>
+    <p>Core API: <span style="font-family: 'JetBrains Mono'; color: var(--accent);">limit + offset</span><br>
+    Multichannel API: <span style="font-family: 'JetBrains Mono'; color: var(--accent);">page + limit</span> (page starts at 1)</p>
+  </div>
+  <div class="trap-card" style="margin-top: 16px;">
+    <div class="trap-title">Trap 5: Schedule Disabled Days</div>
+    <p><span class="wrong">"from": 0, "to": 0</span> → 422 error<br>
+    <span class="right">"from": 0, "to": 23, "enabled": false</span> → works</p>
+  </div>
+</div>
+
+<!-- SLIDE 12: CASE STUDY TITLE -->
+<div class="slide center" data-slide="12">
+  <h3>Case Study</h3>
+  <h1>OpsLayer: <span class="accent">50 Segments</span>,<br>One Product, One Day</h1>
+  <p class="subtitle">Vertical SaaS targeting 10 industries × 5 pain triggers</p>
+</div>
+
+<!-- SLIDE 13: BEFORE/AFTER -->
+<div class="slide" data-slide="13">
+  <h3>Results</h3>
+  <h2>Same 50,000 Contacts. Different Approach.</h2>
+  <div class="comparison">
+    <div class="col bad">
+      <h4>Before: Spray & Pray</h4>
+      <ul>
+        <li>1 generic campaign</li>
+        <li>0.8% reply rate</li>
+        <li>12 meetings</li>
+        <li>$2,917 cost per meeting</li>
+        <li>$180K pipeline</li>
+        <li>ROI: negative</li>
+      </ul>
+    </div>
+    <div class="col good">
+      <h4>After: 50 Micro-Campaigns</h4>
+      <ul>
+        <li>50 tailored campaigns</li>
+        <li>4.2% reply rate (+425%)</li>
+        <li>87 meetings (+625%)</li>
+        <li>$172 cost per meeting (-94%)</li>
+        <li>$1.4M pipeline (+678%)</li>
+        <li>11 deals closed ($495K)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 14: SEGMENT MATRIX -->
+<div class="slide" data-slide="14">
+  <h3>10 Verticals × 5 Pain Triggers</h3>
+  <h2>50 Unique Conversations</h2>
+  <div style="overflow-x: auto;">
+    <table style="font-size: 13px;">
+      <tr>
+        <th></th>
+        <th>Audit Failed</th>
+        <th>New Regulation</th>
+        <th>Scaling Pain</th>
+        <th>New CFO/COO</th>
+        <th>Competitor Incident</th>
+      </tr>
+      <tr><td style="color: var(--accent);">Healthcare</td><td>HIPAA gaps</td><td>CMS deadline</td><td>3→8 clinics</td><td>Fix billing</td><td>$2M fine</td></tr>
+      <tr><td style="color: var(--accent);">Construction</td><td>OSHA flagged</td><td>Prevailing wage</td><td>5 jobsites</td><td>47 spreadsheets</td><td>$500K violation</td></tr>
+      <tr><td style="color: var(--accent);">Logistics</td><td>Customs hold</td><td>eFTI mandate</td><td>New lanes</td><td>Fresh eyes</td><td>Port delay</td></tr>
+      <tr><td style="color: var(--accent);">Finance</td><td>SOX issues</td><td>SEC update</td><td>2→8 offices</td><td>Audit trail</td><td>Data breach</td></tr>
+      <tr><td style="color: var(--accent);">Legal</td><td>Bar complaint</td><td>Trust rules</td><td>Multi-office</td><td>COO hire</td><td>Malpractice</td></tr>
+      <tr><td style="color: var(--accent);">Manufacturing</td><td>ISO failed</td><td>EPA update</td><td>New plant</td><td>CFO mandate</td><td>Recall</td></tr>
+      <tr><td style="color: var(--accent);">Energy</td><td>FERC citation</td><td>Emissions rules</td><td>Expansion</td><td>New COO</td><td>Spill</td></tr>
+      <tr><td style="color: var(--accent);">Real Estate</td><td>Housing audit</td><td>Fair housing</td><td>Portfolio 2x</td><td>New CFO</td><td>Lawsuit</td></tr>
+      <tr><td style="color: var(--accent);">Insurance</td><td>State exam</td><td>NAIC model</td><td>New states</td><td>CFO hire</td><td>Carrier issue</td></tr>
+      <tr><td style="color: var(--accent);">Food & Bev</td><td>FDA gaps</td><td>FSMA 204</td><td>2→6 facilities</td><td>New COO</td><td>Recall 50K units</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- SLIDE 15: TOP SEGMENTS -->
+<div class="slide" data-slide="15">
+  <h3>What Worked</h3>
+  <h2>Top 5 Segments by Reply Rate</h2>
+  <table>
+    <tr><th>#</th><th>Segment</th><th>Reply Rate</th><th>Meetings</th><th>Why</th></tr>
+    <tr><td>1</td><td style="color: var(--accent);">Construction + Audit Failed</td><td>8.7%</td><td>14</td><td>OSHA flag = fix it NOW</td></tr>
+    <tr><td>2</td><td style="color: var(--accent);">Healthcare + New Regulation</td><td>7.2%</td><td>11</td><td>CMS deadline = hair on fire</td></tr>
+    <tr><td>3</td><td style="color: var(--accent);">Logistics + New CFO</td><td>6.1%</td><td>9</td><td>Fresh eyes, wants to modernize</td></tr>
+    <tr><td>4</td><td style="color: var(--accent);">Manufacturing + Competitor Fine</td><td>5.8%</td><td>8</td><td>Fear: same could happen to us</td></tr>
+    <tr><td>5</td><td style="color: var(--accent);">Finance + Scaling Pain</td><td>5.3%</td><td>7</td><td>2→8 offices, spreadsheets breaking</td></tr>
+  </table>
+</div>
+
+<!-- SLIDE 16: LIVE DEMO 2 -->
+<div class="slide center" data-slide="16">
+  <span class="badge live">LIVE DEMO #2</span>
+  <h1 style="margin-top: 24px;">3 Campaigns,<br><span class="accent">10 Minutes</span></h1>
+  <p class="subtitle">SaaS outbound + Membership acquisition + Event play — back to back</p>
+</div>
+
+<!-- SLIDE 17: AT SCALE -->
+<div class="slide" data-slide="17">
+  <h3>At Scale</h3>
+  <h2>Managing 10+ Clients From One Terminal</h2>
+  <ul>
+    <li><strong style="color: var(--accent);">Sender Cache</strong> — first run fetches IDs, then cached. Saves 18K tokens per campaign</li>
+    <li><strong style="color: var(--accent);">Workspace Verification</strong> — checks before creating. Never wrong workspace</li>
+    <li><strong style="color: var(--accent);">Batch Creation</strong> — write all variants in one file, run 5x. Templates reusable</li>
+    <li><strong style="color: var(--accent);">DRAFT Only</strong> — never auto-launches. You always review first</li>
+  </ul>
+  <div class="stats-row" style="margin-top: 40px;">
+    <div class="stat">
+      <div class="value" style="color: var(--red);">100 hrs</div>
+      <div class="label">Manual (50 campaigns)</div>
+    </div>
+    <div class="stat">
+      <div class="value" style="font-size: 64px;">→</div>
+      <div class="label">&nbsp;</div>
+    </div>
+    <div class="stat">
+      <div class="value" style="color: var(--accent);">2.5 hrs</div>
+      <div class="label">With Claude Code</div>
+    </div>
+    <div class="stat">
+      <div class="value" style="font-size: 64px;">= </div>
+      <div class="label">&nbsp;</div>
+    </div>
+    <div class="stat">
+      <div class="value" style="color: var(--accent);">40x</div>
+      <div class="label">Faster</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 18: OPEN SOURCE -->
+<div class="slide" data-slide="18">
+  <h3>Open Source</h3>
+  <h2>Your Turn</h2>
+  <div class="code-block" style="font-size: 20px;">
+    <span class="comment"># Install in 30 seconds</span><br>
+    <span class="keyword">git clone</span> <span class="string">github.com/ajurkev/salesforge-campaign-skills</span><br>
+    <span class="keyword">cp -r</span> salesforge-* <span class="string">~/.claude/skills/</span><br><br>
+    <span class="comment"># Then just type:</span><br>
+    <span class="keyword">/salesforge-sequence</span>
+  </div>
+  <ul style="margin-top: 32px;">
+    <li>Complete Salesforge API v2 reference (every endpoint + gotchas)</li>
+    <li>Sequence creator with 8-step pipeline</li>
+    <li>Contact manager, enrollment manager, deliverability checker</li>
+    <li>All traps pre-solved — metadata.message, integer IDs, schedule fix</li>
+  </ul>
+</div>
+
+<!-- SLIDE 19: RECAP -->
+<div class="slide" data-slide="19">
+  <h3>Recap</h3>
+  <h2>Before → After</h2>
+  <table>
+    <tr><th style="color: var(--red);">Before</th><th style="color: var(--accent);">After</th></tr>
+    <tr><td>2 hours per campaign</td><td style="color: var(--accent);">3 minutes per campaign</td></tr>
+    <tr><td>Manual copy-paste into UI</td><td style="color: var(--accent);">Paste raw text, approve, done</td></tr>
+    <tr><td>Forgot to spam check?</td><td style="color: var(--accent);">Automated on every campaign</td></tr>
+    <tr><td>Spintax by hand</td><td style="color: var(--accent);">3 variants auto-generated per sentence</td></tr>
+    <tr><td>Wrong workspace? Wrong senders?</td><td style="color: var(--accent);">Verified before any API call</td></tr>
+    <tr><td>50 campaigns = 100 hours</td><td style="color: var(--accent);">50 campaigns = 2.5 hours</td></tr>
+    <tr><td>API gotchas = 2 days debugging</td><td style="color: var(--accent);">Already solved in the skill</td></tr>
+  </table>
+</div>
+
+<!-- SLIDE 20: Q&A -->
+<div class="slide center" data-slide="20">
+  <h1>Questions?</h1>
+  <div style="margin-top: 40px;">
+    <p style="font-size: 20px; color: var(--muted); margin-bottom: 12px;">Repo: <span style="color: var(--accent);">github.com/ajurkev/salesforge-campaign-skills</span></p>
+    <p style="font-size: 20px; color: var(--muted); margin-bottom: 12px;">API Docs: <span style="color: var(--accent);">api.salesforge.ai/public/v2/swagger</span></p>
+    <p style="font-size: 20px; color: var(--muted); margin-bottom: 12px;">Connect: <span style="color: var(--accent);">linkedin.com/in/artyom-jurkevich</span></p>
+    <p style="font-size: 20px; color: var(--muted);">Book a call: <span style="color: var(--accent);">cal.com/artyom-jurkevich-call/revsculpt</span></p>
+  </div>
+  <p style="margin-top: 60px; color: var(--muted); font-size: 14px;">Built by RevSculpt — revsculpt.com</p>
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <span>RevSculpt — Salesforge Academy</span>
+  <span>50 Multi-channel Sequences in One Day</span>
+</div>
+
+<div class="slide-number" id="slideNumber">1 / 20</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+
+  function showSlide(n) {
+    slides[current].classList.remove('active');
+    current = Math.max(0, Math.min(n, slides.length - 1));
+    slides[current].classList.add('active');
+    document.getElementById('slideNumber').textContent = `${current + 1} / ${slides.length}`;
+    document.getElementById('progress').style.width = `${((current + 1) / slides.length) * 100}%`;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); showSlide(current + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); showSlide(current - 1); }
+    if (e.key === 'Home') { e.preventDefault(); showSlide(0); }
+    if (e.key === 'End') { e.preventDefault(); showSlide(slides.length - 1); }
+  });
+
+  // Click to advance
+  document.addEventListener('click', (e) => {
+    if (e.clientX > window.innerWidth / 2) showSlide(current + 1);
+    else showSlide(current - 1);
+  });
+</script>
+
+</body>
+</html>
