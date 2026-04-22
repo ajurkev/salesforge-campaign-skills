@@ -27,7 +27,7 @@ Created by [RevSculpt](https://revsculpt.com)
 ## Requires
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-- [Salesforge MCP server](https://salesforge.ai) configured in Claude Code
+- Salesforge MCP server configured in Claude Code — [setup guide](https://help.salesforge.ai/en/articles/10333582-salesforge-mcp-server-connect-with-ai-assistants)
 - Salesforge API key (Settings → Integrations → API Key)
 
 ## Installation
