@@ -75,7 +75,7 @@ The ORIGINAL sentence must appear as option 1. Exactly 4 options total.
 - Thread-reply subjects → NOT spintaxed
 - Do NOT spin: lines of 3 words or fewer, greeting lines (just salutation + name), variable-only lines, specific data/percentages, P.S. lines with metrics
 
-**Spintax format:** `{opt1 | opt2 | opt3}` — single curly braces, pipe-separated. If Salesforge uses a different format, convert at Step 5.
+**Spintax format:** `{{opt1 | opt2 | opt3}}` — double curly braces, pipe-separated. This is Salesforge's native format.
 
 ---
 
@@ -98,20 +98,20 @@ After running fix_spam.py, scan output for variable tokens. If any character ins
 
 ### Step 5 — Convert Variables to Salesforge Format
 
-⚠️ Variable format depends on Salesforge's actual implementation. Default mapping:
+**CONFIRMED (April 2026):** Salesforge uses double curly braces for both spintax AND variables.
 
 | Source variable | Salesforge format |
 |---|---|
-| `{{firstName}}` / `{{first_name}}` | `{first_name}` ⚠️ |
-| `{{companyName}}` / `{{company_name}}` | `{company}` ⚠️ |
-| `{{job_title}}` / `{{jobTitle}}` | `{job_title}` ⚠️ |
-| `{{lastName}}` / `{{last_name}}` | `{last_name}` ⚠️ |
+| `{{firstName}}` / `{{first_name}}` | `{{first_name}}` |
+| `{{companyName}}` / `{{company_name}}` | `{{company}}` |
+| `{{job_title}}` / `{{jobTitle}}` | `{{job_title}}` |
+| `{{lastName}}` / `{{last_name}}` | `{{last_name}}` |
 
-**Custom variables:** Map directly — `{{pain_point}}` → `{pain_point}`
+**Custom variables:** Map directly — `{{pain_point}}` stays as `{{pain_point}}`
 
-Flag which variables need Clay enrichment vs. standard Salesforge contact fields.
+Salesforge differentiates variables from spintax internally: blocks with `|` are spintax, without `|` are variables.
 
-⚠️ **First-run task:** Test variable rendering in Salesforge with a test sequence. Update the salesforge reference skill with confirmed format.
+**Do NOT include a signature line.** Salesforge appends the sender signature from mailbox settings automatically.
 
 ---
 
@@ -175,121 +175,74 @@ Type `preview [1-4]` to see full copy. Otherwise, approve to continue.
 
 After approval:
 
-**Two APIs in play:**
-- Core API: `https://api.salesforge.ai/public/v2`
-- Multichannel API: `https://multichannel-api.salesforge.ai/public`
+**Multichannel API:** `https://multichannel-api.salesforge.ai/public/multichannel`
+**Auth:** `Authorization: <API_KEY>` — plain key, no Bearer
 
 ```
 1. Validate API key
-   GET /me → confirm auth works, get accountId
+   GET https://api.salesforge.ai/public/v2/me → confirm auth
 
 2. Get workspace
-   GET /workspaces → list all workspaces → user confirms which one
+   GET https://api.salesforge.ai/public/v2/workspaces → user confirms
    → save workspaceID
 
-3. Check for name conflicts
-   GET /multichannel/workspaces/{workspaceID}/sequences?limit=100
-   → scan for duplicate names
-   If conflict: append "v2" or ask user
-
-4. Create sequence
-   POST /multichannel/workspaces/{workspaceID}/sequences
+3. Create sequence
+   POST /workspaces/{workspaceID}/sequences
    Body: {"name": "[Client] - [Description]", "timezone": "America/New_York"}
-   → save sequenceID
+   → save sequenceID (INTEGER)
 
-5. Get email action ID
-   GET /multichannel/actions?channel=email
-   → find the "send email" action → save actionId
+4. Get email action ID
+   GET /actions?channel=email
+   → actionId = 3 (confirmed)
 
-6. Get root branch
-   GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/branches
-   → save branchId from root branch
+5. For EACH email step (BRANCH CHAINING):
 
-7. Create email nodes (one per step)
-   POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions
+   a. GET /workspaces/{wks}/sequences/{seq}/branches
+      → use LAST branch ID
 
-   CRITICAL: actionId and branchId are INTEGERS, not strings.
-   Variants use a nested metadata object — NOT flat subject/body fields.
+   b. POST /workspaces/{wks}/sequences/{seq}/nodes/actions
+      {
+        "actionId": 3,
+        "branchId": [LAST_BRANCH_ID],
+        "waitDays": [0 for step 1, 3 for step 2, 4 for step 3],
+        "distributionStrategy": "equal",
+        "variants": [{
+          "isEnabled": true,
+          "exposureInPercentage": 100,
+          "metadata": {
+            "name": "Variant A",
+            "subject": "{{spintaxed subject | option 2}}",
+            "message": "<p>Hey {{first_name}},</p><p><br></p><p>{{Body text | variant}}</p>"
+          }
+        }]
+      }
 
-   For each email step:
-   {
-     "actionId": 123,          ← INTEGER from step 5
-     "branchId": 456,          ← INTEGER from step 6
-     "waitDays": 0,            ← INTEGER, 0 = send immediately
-     "distributionStrategy": "equal",
-     "variants": [
-       {
-         "isEnabled": true,
-         "exposureInPercentage": 100,
-         "metadata": {
-           "name": "Variant A",
-           "subject": "[spintaxed subject line]",
-           "message": "<p>HTML body here</p>"
-         }
-       }
-     ]
-   }
+   c. IMPORTANT: After creating each node, a NEW branch is created.
+      You MUST re-fetch branches before adding the next node.
+      Reusing the same branchId causes a 500 error.
 
-   FIELD MAPPING:
-   - Email body goes in variants[].metadata.message (NOT "body")
-   - Subject goes in variants[].metadata.subject
-   - For A/B tests: add multiple objects to variants[], set exposureInPercentage to split (e.g. 50/50)
-   - isEnabled must be true for the variant to send
+6. Set schedule
+   PUT /workspaces/{wks}/sequences/{seq}/schedule
+   Mon-Fri 8-17, disabled days: from:0 to:23
 
-   WAIT DAYS:
-   Step 1: waitDays=0 (send immediately on enrollment)
-   Step 2: waitDays=2-3
-   Step 3: waitDays=3-4
-   Step 4: waitDays=2-3
+7. Configure settings
+   PATCH /workspaces/{wks}/sequences/{seq}/settings
+   plainText=true, openTracking=false
 
-   NOTE: To update wait time after creation, use PATCH with wait_in_minutes (not waitDays)
+8. Attach sender profiles
+   GET /workspaces/{wks}/sender-profiles → response key is "profiles"
+   POST /workspaces/{wks}/sequences/{seq}/sender-profiles
+   {"senderProfileIds": [5822, 5823]}  ← INTEGER array
+   NOTE: Profiles must be created in dashboard first
 
-8. Set schedule
-   PUT /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/schedule
-   {
-     "timezone": "America/New_York",
-     "schedule": {
-       "monday": {"enabled": true, "from": 8, "to": 17},
-       "tuesday": {"enabled": true, "from": 8, "to": 17},
-       "wednesday": {"enabled": true, "from": 8, "to": 17},
-       "thursday": {"enabled": true, "from": 8, "to": 17},
-       "friday": {"enabled": true, "from": 8, "to": 17},
-       "saturday": {"enabled": false, "from": 0, "to": 23},
-       "sunday": {"enabled": false, "from": 0, "to": 23}
-     }
-   }
-   NOTE: from/to are integer hours (0-23), NOT "HH:MM" strings
-
-9. Configure settings
-   PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/settings
-   {
-     "plainTextEmailsEnabled": true,
-     "openTrackingEnabled": false,
-     "optOutLinkEnabled": false,
-     "optOutTextEnabled": false,
-     "ccAndBccEnabled": false,
-     "trackOpportunitiesEnabled": false
-   }
-
-10. Attach sender profiles
-    Read sender-cache.md → if cached, use those IDs
-    If not cached:
-      GET /multichannel/workspaces/{workspaceID}/sender-profiles?limit=100
-      → show list → user selects → cache to sender-cache.md
-    POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles
-    {"senderProfileIds": ["id1", "id2"]}
-
-11. Verify
-    GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}
-    GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes
-    → confirm node count, subjects, bodies intact
+9. Verify
+   GET /workspaces/{wks}/sequences/{seq} → confirm setup
+   GET /workspaces/{wks}/sequences/{seq}/nodes → verify all steps
 ```
 
 ### IMPORTANT: DO NOT ACTIVATE.
 
-**Never call the /launch endpoint or set status to "active". The sequence stays in DRAFT status. Launch is always done manually by the user in the Salesforge dashboard.**
-
-Show final confirmation: "Sequence '[name]' created in DRAFT. Go to Salesforge dashboard to review and launch."
+**Never call the /launch endpoint. Sequence stays DRAFT. Launch is manual.**
 
 ---
 

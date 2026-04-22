@@ -1,44 +1,42 @@
 ---
 name: salesforge
-description: Reference skill for working with the Salesforge API v2. Contains all confirmed rules for sequences, contacts, enrollments, sender profiles, workspaces, webhooks, nodes, and defaults. Use when creating or managing Salesforge sequences, contacts, or any Salesforge API operation.
+description: Reference skill for working with the Salesforge Multichannel API. Contains all confirmed rules for sequences, contacts, enrollments, sender profiles, workspaces, webhooks, nodes, and defaults. Use when creating or managing Salesforge sequences, contacts, or any Salesforge API operation.
 ---
 
-# Salesforge API v2 — Rules & Reference
+# Salesforge Multichannel API — Rules & Reference
 
 **Source:** https://api.salesforge.ai/public/v2/swagger/index.html
 **Spec:** https://api.salesforge.ai/public/v2/swagger/doc3.json
+**Last verified:** April 2026
 
 ## Connection
 
-- **Base URL:** `https://api.salesforge.ai/public/v2`
-- **Multichannel Base URL:** `https://multichannel-api.salesforge.ai/public`
-- **Auth:** `Authorization: <API_KEY>` header (ApiKeyAuth)
+- **Base URL:** `https://multichannel-api.salesforge.ai/public/multichannel`
+- **Auth:** `Authorization: <API_KEY>` header — plain key, NO Bearer prefix
 - **Content-Type:** `application/json`
 - **API Key Location:** Salesforge → Settings → Integrations → Generate API Key
+
+> **CONFIRMED:** The base URL includes `/multichannel` at the end. The Salesforge dashboard uses a different URL pattern (`/api/workspaces/...` with JWT) — ignore that, always use the documented path with API key auth.
 
 ---
 
 ## Auth
 
-### GET /me
-Validates API key, returns `accountId` and `apiKeyName`.
+### GET https://api.salesforge.ai/public/v2/me
+Validates API key, returns `accountId` and `apiKeyName`. This is the only endpoint on the core API base URL you need.
 
 ---
 
 ## Workspaces
 
-### GET /workspaces
+### GET https://api.salesforge.ai/public/v2/workspaces
 List all workspaces. Query: `limit` (default 10), `offset` (default 0).
-
-### POST /workspaces
-Create workspace. Body: `{"name": "string"}` (1-100 chars, required). Returns 201.
-
-### GET /workspaces/{workspaceID}
-Get single workspace.
 
 ---
 
 ## Contacts
+
+All contact endpoints use the core API base: `https://api.salesforge.ai/public/v2`
 
 ### GET /workspaces/{workspaceID}/contacts
 List contacts. Query params:
@@ -77,7 +75,6 @@ Bulk create contacts. Body:
       "company": "string",
       "position": "string",
       "tags": ["string"],
-      "tagIds": ["string"],
       "customVars": {"key": "value"}
     }
   ]
@@ -85,15 +82,10 @@ Bulk create contacts. Body:
 ```
 **Limit:** 1-100 contacts per call. Returns 201.
 
+> **CONFIRMED:** Tags passed as `"tags": ["my-tag"]` are created automatically. However, `tagIds` will NOT be populated — use the `tags` string array for filtering contacts by tag name when paginating.
+
 ### GET /workspaces/{workspaceID}/contacts/{contactID}
 Get single contact.
-
----
-
-## Custom Variables
-
-### GET /workspaces/{workspaceID}/custom-vars
-List custom variables. Query: `limit`, `offset`.
 
 ---
 
@@ -114,43 +106,23 @@ Bulk create DNC entries. Body:
 ## Mailboxes
 
 ### GET /workspaces/{workspaceID}/mailboxes
-List mailboxes. Query params:
+List mailboxes. Uses core API base. Query params:
 - `limit`, `offset`
 - `statuses[]` — filter by status
-- `mailbox_ids[]`, `excluded_mailbox_ids[]`
 - `search` — text search
-- `tag_ids[]`, `not_tag_ids[]`
-- `addresses[]` — filter by email address
-
-### GET /workspaces/{workspaceID}/mailboxes/{mailboxID}
-Get mailbox details. Returns:
-- `address`, `id`, `firstName`, `lastName`
-- `status`, `mailboxProvider`
-- `signature`, `trackingDomain`, `trackingDomainStatus`
-- `dailyEmailLimit`, `disconnectReason`
-
-### POST /workspaces/{workspaceID}/mailboxes/{mailboxID}/emails/{emailID}/reply
-Reply to an email thread. Body:
-```json
-{
-  "content": "string",
-  "includeHistory": true,
-  "ccs": ["email@example.com"],
-  "bccs": ["email@example.com"]
-}
-```
-Returns 204.
 
 ---
 
-## Sequences (Multichannel API)
+## Sequences
 
-**Base URL:** `https://multichannel-api.salesforge.ai/public`
+All sequence endpoints use: `https://multichannel-api.salesforge.ai/public/multichannel`
 
-### GET /multichannel/workspaces/{workspaceID}/sequences
+### GET /workspaces/{workspaceID}/sequences
 List sequences. Query: `page` (min 1), `limit` (1-100), `status` (draft|active|completed|paused).
 
-### POST /multichannel/workspaces/{workspaceID}/sequences
+> **CONFIRMED:** Response uses `"sequences"` key (not `"data"`).
+
+### POST /workspaces/{workspaceID}/sequences
 Create sequence. Body:
 ```json
 {
@@ -159,49 +131,45 @@ Create sequence. Body:
   "timezone": "string (REQUIRED, IANA format e.g. America/New_York)"
 }
 ```
-**Both `name` and `timezone` are required.** Returns 201 with sequence ID (integer).
+**Both `name` and `timezone` are required.** Returns 201 with sequence ID (**integer**).
 
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}
+### GET /workspaces/{workspaceID}/sequences/{sequenceID}
 Get sequence details.
 
-### PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}
+### PATCH /workspaces/{workspaceID}/sequences/{sequenceID}
 Update sequence (name, description, timezone).
 
-### DELETE /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}
+### DELETE /workspaces/{workspaceID}/sequences/{sequenceID}
 Delete sequence. Returns 204.
 
-### PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/launch
-Launch sequence. Returns sequence response.
-
-### PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/status
-Update status. Body:
-```json
-{
-  "status": "active" | "paused"
-}
-```
+### PATCH /workspaces/{workspaceID}/sequences/{sequenceID}/status
+Update status. Body: `{"status": "active" | "paused"}`
 
 ---
 
 ## Sequence Nodes (Steps)
 
-Salesforge uses a **node-based** sequence model, not a linear step array.
+Salesforge uses a **node-based** sequence model with **branch chaining**.
 
-### GET /multichannel/actions
+### GET /actions
 List available actions. Query: `channel` (email|linkedin), `name`, `page`, `limit`.
 
-### GET /multichannel/conditions
-List available conditions. Same query params as actions.
+> **CONFIRMED:** Email send action has `id: 3`. This is consistent across accounts.
 
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes
+### GET /workspaces/{workspaceID}/sequences/{sequenceID}/nodes
 List all nodes in a sequence. Query: `type` (action|condition|root|terminal), `channel`, `name`, `page`, `limit`.
 
-### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions
+### GET /workspaces/{workspaceID}/sequences/{sequenceID}/branches
+List branches. Query: `page`, `limit`.
+
+> **CONFIRMED:** Response uses `"branches"` key.
+
+### POST /workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions
 Create action node (email step). Body:
 ```json
 {
-  "actionId": 123,
-  "branchId": 456,
+  "actionId": 3,
+  "branchId": 73824,
   "waitDays": 0,
   "distributionStrategy": "equal",
   "variants": [
@@ -210,34 +178,37 @@ Create action node (email step). Body:
       "exposureInPercentage": 100,
       "metadata": {
         "name": "Variant A",
-        "subject": "your subject line here",
-        "message": "<p>HTML email body here</p>",
-        "allowed_validation_statuses": ["safe", "catch_all"]
+        "subject": "{{spintax subject | option 2 | option 3}}",
+        "message": "<p>Hey {{first_name}},</p><p><br></p><p>{{Body spintax option 1 | option 2}}</p>"
       }
     }
   ]
 }
 ```
+
 **CRITICAL TYPES:**
-- `actionId`: **integer** (NOT string) — get from GET /multichannel/actions
-- `branchId`: **integer** (NOT string) — get from GET .../branches
+- `actionId`: **integer** — use `3` for email (confirmed)
+- `branchId`: **integer** — get from GET .../branches
 - `waitDays`: **integer** (0 = send immediately)
-- `distributionStrategy`: "equal" or "custom"
-- `variants[].exposureInPercentage`: integer 0-100 (must sum to 100 across variants)
-- `variants[].metadata.message`: the email body (NOT "body")
-- `variants[].metadata.subject`: the subject line
 
-Returns 201.
+**CRITICAL — BRANCH CHAINING:**
+Each new node creates a NEW branch after it. To add multiple steps:
+1. Get branches → use LAST branch ID for first node
+2. Create node 1 → new branch is created
+3. Get branches again → use the NEW last branch ID for node 2
+4. Create node 2 → another new branch is created
+5. Get branches again → use newest branch for node 3
+6. Repeat
 
-### PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions/{nodeID}
+**This is the #1 gotcha.** If you reuse the same branchId for multiple nodes, the API returns 500.
+
+### PATCH /workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions/{nodeID}
 Update action node. Body:
 ```json
 {
-  "wait_in_minutes": 4320,
-  "distributionStrategy": "equal",
   "variants": [
     {
-      "id": 789,
+      "id": 33050,
       "isEnabled": true,
       "exposureInPercentage": 100,
       "metadata": {
@@ -249,43 +220,41 @@ Update action node. Body:
   ]
 }
 ```
-**NOTE:** Update uses `wait_in_minutes` (NOT waitDays). 1 day = 1440 minutes.
+**NOTE:** To update wait time, use `wait_in_minutes` (NOT waitDays). 1 day = 1440 minutes.
 
-### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/conditions
-Create condition node. Body:
-```json
-{
-  "branchId": "string (REQUIRED)",
-  "conditionId": "string (REQUIRED)"
-}
-```
-Returns 201.
-
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/{nodeID}
-Get single node.
-
-### DELETE /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/{nodeID}
+### DELETE /workspaces/{workspaceID}/sequences/{sequenceID}/nodes/{nodeID}
 Delete node. Returns 204.
 
 ---
 
-## Sequence Branches
+## Spintax & Variables
 
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/branches
-List branches. Query: `page`, `limit`.
+**CONFIRMED FORMAT (April 2026):**
+
+- **Spintax:** `{{option 1 | option 2 | option 3 | option 4}}` — double curly braces
+- **Variables:** `{{first_name}}`, `{{last_name}}`, `{{company}}` — double curly braces
+- **Sender name:** Pulled from mailbox settings automatically — do NOT include a signature line in the email body
+
+Spintax and variables both use `{{ }}`. Salesforge differentiates them internally. A block with `|` is spintax; without `|` is a variable.
+
+**HTML body format:**
+- Each paragraph: `<p>text</p>`
+- Blank line between paragraphs: `<p><br></p>`
+- No inline CSS, no classes, no styling
+- No em-dashes or special unicode — use plain ASCII to avoid API 500 errors
 
 ---
 
 ## Sequence Schedule
 
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/schedule
+### GET /workspaces/{workspaceID}/sequences/{sequenceID}/schedule
 Get current schedule.
 
-### PUT /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/schedule
+### PUT /workspaces/{workspaceID}/sequences/{sequenceID}/schedule
 Set schedule. Body:
 ```json
 {
-  "timezone": "America/New_York (REQUIRED)",
+  "timezone": "America/New_York",
   "schedule": {
     "sunday": {"enabled": false, "from": 0, "to": 23},
     "monday": {"enabled": true, "from": 8, "to": 17},
@@ -297,135 +266,69 @@ Set schedule. Body:
   }
 }
 ```
-**Notes:**
-- `from`/`to` are hours 0-23 (integers), NOT "HH:MM" strings
-- **TRAP:** `to` must be greater than `from` — even on disabled days. `"from": 0, "to": 0` returns 422. Use `"from": 0, "to": 23` for disabled days.
-
----
-
-## Sequence Sender Profiles
-
-### GET /multichannel/workspaces/{workspaceID}/sender-profiles
-List all sender profiles. Query: `page`, `limit`.
-
-### PATCH /multichannel/workspaces/{workspaceID}/sender-profiles/{senderProfileID}
-Update sender profile. Body: `{"name": "string", "mailboxIds": ["string"]}`.
-
-### DELETE /multichannel/workspaces/{workspaceID}/sender-profiles/{senderProfileID}
-Delete sender profile. Returns 204.
-
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles
-List sender profiles attached to a sequence.
-
-### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles
-Attach sender profiles to sequence. Body:
-```json
-{
-  "senderProfileIds": [1, 2, 3]
-}
-```
-**CRITICAL:** `senderProfileIds` is **integer[]**, NOT string[].
-**Minimum:** 1 sender profile required.
-
-### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles/remove
-Remove sender profiles from sequence. Body:
-```json
-{
-  "senderProfileIds": ["id1", "id2"]
-}
-```
-**Limit:** 1-50 IDs per call.
+**TRAP:** `to` must be greater than `from` — even on disabled days. Use `"from": 0, "to": 23` for disabled days.
 
 ---
 
 ## Sequence Settings
 
-### GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/settings
-Get sequence settings.
-
-### PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/settings
-Update settings. Body:
+### PATCH /workspaces/{workspaceID}/sequences/{sequenceID}/settings
 ```json
 {
-  "ccAndBccEnabled": false,
-  "bcc": "",
-  "cc": "",
+  "plainTextEmailsEnabled": true,
   "openTrackingEnabled": false,
   "optOutLinkEnabled": false,
-  "optOutLinkText": "",
-  "optOutText": "",
   "optOutTextEnabled": false,
-  "plainTextEmailsEnabled": true,
-  "trackOpportunitiesEnabled": false,
-  "opportunitiesValue": 0
+  "ccAndBccEnabled": false,
+  "trackOpportunitiesEnabled": false
 }
 ```
 
-**Defaults (apply unless user specifies otherwise):**
-- `openTrackingEnabled`: false (improves deliverability)
-- `plainTextEmailsEnabled`: true
-- `optOutLinkEnabled`: false (cold email best practice)
-- `ccAndBccEnabled`: false
-- `trackOpportunitiesEnabled`: false
+---
+
+## Sender Profiles
+
+> **CONFIRMED:** Sender profiles can only be **created** in the Salesforge dashboard. The API supports GET, PATCH, DELETE, and attaching to sequences — but NOT creating new profiles.
+
+### GET /workspaces/{workspaceID}/sender-profiles
+List all sender profiles. Response uses `"profiles"` key (not `"senderProfiles"`).
+
+### POST /workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles
+Attach sender profiles to sequence. Body:
+```json
+{
+  "senderProfileIds": [5822, 5823]
+}
+```
+**CRITICAL:** `senderProfileIds` is **integer[]**, NOT string[].
+
+### POST /workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles/remove
+Remove sender profiles from sequence. Body: `{"senderProfileIds": [5822]}`
 
 ---
 
 ## Enrollments
 
-### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/enrollments
+### POST /workspaces/{workspaceID}/sequences/{sequenceID}/enrollments
 Add enrollments. Body:
 ```json
 {
   "filters": {
-    "esps": ["string"],
-    "hasEmail": true,
-    "hasValidLinkedIn": true,
-    "leadIds": ["string"],
-    "tagIds": ["string"],
-    "validationRunId": "string",
-    "validationStatuses": ["string"]
+    "leadIds": ["contact_id_1", "contact_id_2"],
+    "hasEmail": true
   },
-  "limit": 100
+  "limit": 500
 }
 ```
-**`filters` is REQUIRED.** Use `leadIds` to enroll specific contacts.
-Returns 201.
-
-### POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/enrollments/remove
-Remove enrollments. Body: `RemoveEnrollmentsRequest`. Returns 204.
-
----
-
-## Validations (Email Verification)
-
-### POST /multichannel/workspaces/{workspaceID}/validations
-Start validation run. Body:
-```json
-{
-  "filters": {
-    "leadIds": ["string"],
-    "tagIds": ["string"],
-    "hasEmail": true,
-    "searchQuery": "string",
-    "withEmailOnly": true
-  },
-  "limit": 100
-}
-```
-Returns 201. **Status 402 if insufficient credits.**
-
-### GET /multichannel/workspaces/{workspaceID}/validations/{runID}/results
-Get validation results summary.
+**`filters` is REQUIRED.** Use `leadIds` to enroll specific contacts. Batch in groups of 500.
 
 ---
 
 ## Webhooks
 
-### GET /workspaces/{workspaceID}/integrations/webhooks
-List webhooks. Query: `limit`, `offset`.
+Webhooks use core API base: `https://api.salesforge.ai/public/v2`
 
 ### POST /workspaces/{workspaceID}/integrations/webhooks
-Create webhook. Body:
 ```json
 {
   "name": "string (REQUIRED)",
@@ -434,143 +337,105 @@ Create webhook. Body:
   "sequenceID": "string"
 }
 ```
-
-**Webhook event types:**
-- `email_sent`
-- `email_opened`
-- `link_clicked`
-- `email_replied`
-- `linkedin_replied`
-- `contact_unsubscribed`
-- `email_bounced`
-- `positive_reply`
-- `negative_reply`
-- `label_changed`
-- `dnc_added`
-
-### GET /workspaces/{workspaceID}/integrations/webhooks/{webhookID}
-Get single webhook.
+Event types: `email_sent`, `email_opened`, `link_clicked`, `email_replied`, `email_bounced`, `positive_reply`, `negative_reply`, `contact_unsubscribed`, `label_changed`, `dnc_added`
 
 ---
 
-## Pagination
-
-**Two different patterns depending on API:**
-
-### Core API (api.salesforge.ai)
-- Uses `limit` + `offset`
-- Default limit: 10
-- Example: `?limit=100&offset=0`, then `?limit=100&offset=100`
-
-### Multichannel API (multichannel-api.salesforge.ai)
-- Uses `page` + `limit`
-- Page minimum: 1
-- Limit: 1-100
-- Example: `?page=1&limit=100`, then `?page=2&limit=100`
-
-**Always paginate. Never assume first page is all data.**
-
----
-
-## Standard Sequence Creation Order
+## Standard Sequence Creation Order (CONFIRMED)
 
 ```
-1. GET /me → validate API key
+1. GET /me (core API) → validate API key
 
-2. GET /workspaces → find correct workspaceID
-   Or GET /workspaces/{workspaceID} if known
+2. GET /workspaces (core API) → find workspaceID
 
-3. POST /multichannel/workspaces/{workspaceID}/sequences
-   Body: {"name": "[Client] - [Description]", "timezone": "America/New_York"}
-   → save sequenceID
+3. POST /workspaces/{wks}/sequences → create sequence
+   Body: {"name": "...", "timezone": "America/New_York"}
+   → save sequenceID (integer)
 
-4. GET /multichannel/actions?channel=email → find email action ID
-   → save actionId for "send email" action
+4. GET /actions?channel=email → get email actionId (usually 3)
 
-5. GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/branches
-   → get root branchId
+5. GET /workspaces/{wks}/sequences/{seq}/branches
+   → get LAST branch ID
 
-6. Create email nodes (steps):
-   POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes/actions
-   For each step:
-   {
-     "actionId": "[email action ID]",
-     "branchId": "[branch ID]",
-     "waitDays": [delay],
-     "variants": [{"subject": "...", "body": "<p>HTML</p>"}]
-   }
+6. For EACH email step:
+   a. POST /workspaces/{wks}/sequences/{seq}/nodes/actions
+      Body: {"actionId": 3, "branchId": [LAST_BRANCH], "waitDays": N, ...}
+   b. GET /workspaces/{wks}/sequences/{seq}/branches
+      → get NEW last branch ID (branch chaining!)
+   c. Use new branch ID for next step
 
-7. PUT /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/schedule
-   Set Mon-Fri, 8-17, timezone
+7. PUT /workspaces/{wks}/sequences/{seq}/schedule
+   → Mon-Fri 8-17
 
-8. PATCH /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/settings
-   Set plainTextEmailsEnabled=true, openTrackingEnabled=false
+8. PATCH /workspaces/{wks}/sequences/{seq}/settings
+   → plainText=true, openTracking=false
 
-9. Attach sender profiles:
-   Read sender-cache.md → if cached, use those IDs
-   If not cached: GET sender-profiles → filter → cache
-   POST /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/sender-profiles
-   {"senderProfileIds": ["id1", "id2"]}
+9. GET /workspaces/{wks}/sender-profiles
+   → find profile IDs (profiles must be created in dashboard first)
+   POST /workspaces/{wks}/sequences/{seq}/sender-profiles
+   → attach profiles
 
-10. Verify:
-    GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID} → confirm setup
-    GET /multichannel/workspaces/{workspaceID}/sequences/{sequenceID}/nodes → verify steps
+10. Upload contacts:
+    POST /workspaces/{wks}/contacts/bulk (core API, batches of 100)
+    → tag each batch for later enrollment
 
-11. STOP — sequence is in DRAFT status.
-    DO NOT launch. DO NOT call /launch endpoint.
-    Launch is always manual by the user.
+11. Enroll contacts:
+    Paginate contacts by tag → collect IDs
+    POST /workspaces/{wks}/sequences/{seq}/enrollments
+    → enroll by leadIds in batches of 500
+
+12. STOP — sequence is DRAFT. Never launch via API.
 ```
 
 ---
 
-## Key Salesforge API Traits
+## Key Traits
 
 | Feature | How It Works |
 |---|---|
-| API structure | Dual API (core + multichannel) |
-| Steps model | Node-based (actions + conditions + branches) |
-| IDs | `actionId`, `branchId`, `senderProfileIds` are all **integers** |
-| Email body field | `variants[].metadata.message` (NOT "body") |
+| Base URL | `https://multichannel-api.salesforge.ai/public/multichannel` |
+| Auth | `Authorization: <API_KEY>` — no Bearer prefix |
+| Steps model | Node-based with branch chaining |
+| IDs | `actionId`, `branchId`, `senderProfileIds` are **integers** |
+| Email body field | `variants[].metadata.message` |
 | Subject field | `variants[].metadata.subject` |
-| Create wait | `waitDays` (integer, days) |
-| Update wait | `wait_in_minutes` (integer, minutes — 1 day = 1440) |
-| Schedule format | Integer hours (0-23), not "HH:MM" strings |
-| Pagination | Core: `limit`+`offset` / Multichannel: `page`+`limit` |
-| Auth | `Authorization: <API_KEY>` header |
-| Sender attachment | `senderProfileIds` (integer[], profiles not mailboxes) |
+| Spintax format | `{{option 1 \| option 2}}` — double curly braces |
+| Variable format | `{{first_name}}` — double curly braces |
+| Create wait | `waitDays` (integer) |
+| Update wait | `wait_in_minutes` (integer, 1 day = 1440) |
+| Schedule | Integer hours (0-23) |
+| Sender profiles | Create in dashboard, attach via API |
+| Contacts | Upload via core API (`api.salesforge.ai/public/v2`) |
+| Enrollments | Filter by `leadIds`, batch 500 |
 | Sequence status | draft → active → paused → completed |
-| A/B variants | `variants` array with `isEnabled`, `exposureInPercentage`, nested `metadata` |
-| DNC format | `dncs: string[]` (plain emails/domains, not objects) |
-| Timezone | IANA format required (e.g. "America/New_York") |
-| Multichannel | Email + LinkedIn + InMail actions |
+| HTML bodies | `<p>text</p>` + `<p><br></p>` for spacing, no special chars |
 
 ---
 
-## Error Handling
+## Gotchas & Traps (Battle-Tested)
 
-| Code | Meaning | Response |
-|---|---|---|
-| 400 | Bad Request | Check body format, required fields |
-| 401 | Unauthorized | API key invalid — regenerate |
-| 402 | Payment Required | Insufficient credits (validation, enrichment) |
-| 403 | Forbidden | Feature not on current plan |
-| 404 | Not Found | Check workspaceID, sequenceID, nodeID |
-| 500 | Server Error | Retry once. If persistent, check status page |
+1. **Branch chaining** — each node creates a new branch. Always re-fetch branches before adding the next node.
+2. **No sender profile creation via API** — must create in dashboard first.
+3. **Em-dashes and unicode** cause 500 errors in email bodies — use plain ASCII only.
+4. **Sender profiles response** uses `"profiles"` key, not `"senderProfiles"`.
+5. **Sequences response** uses `"sequences"` key, not `"data"`.
+6. **Core API's PUT /sequences/{id}/steps** only updates existing steps, cannot add new ones. Always use multichannel nodes API for step creation.
+7. **Tags** passed in contact bulk upload are created automatically but `tagIds` won't be populated in the response. Filter contacts by iterating and checking the `tags` string array.
+8. **Disabled schedule days** still need valid `from`/`to` values. Use `"from": 0, "to": 23`.
 
 ---
 
-## Sender Cache
+## MCP Integration
 
-Store sender profile IDs per workspace in `sender-cache.md`:
+Salesforge also offers an MCP server for Claude Code:
 
-```markdown
-## [Workspace Name]
-- workspace_id: [ID]
-- sender_profile_ids: [id1, id2, id3]
-- last_updated: [YYYY-MM-DD]
+```bash
+claude mcp add salesforge \
+  --transport http \
+  --header "X-Salesforge-Key: YOUR_API_KEY" \
+  --scope project \
+  salesforge \
+  https://mcp.salesforge.ai/mcp
 ```
 
-**On every sequence creation:**
-1. Read sender-cache.md
-2. If cached → confirm with user → attach directly
-3. If not cached → GET /sender-profiles → show list → user selects → cache → attach
+Restart Claude Code after adding. The MCP provides direct tool access to all Salesforge operations.
