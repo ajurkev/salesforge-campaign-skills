@@ -1,70 +1,110 @@
-# Salesforge MCP Skills for Claude Code
+# Salesforge Secret Sauce by RevSculpt
 
-Create multichannel sequences in Salesforge directly from Claude Code. Paste copy → spam check → spintax → live sequence in DRAFT. Works with the official Salesforge MCP server.
+Create 50 multichannel sequences in Salesforge from your terminal. Email + LinkedIn, spintax, variables — all automated.
 
 Created by [RevSculpt](https://revsculpt.com)
 
-## Skills
-
-| Skill | Command | Purpose |
-|-------|---------|---------|
-| `salesforge-reference` | `/salesforge` | API rules, confirmed traps, variable format, branch chaining, defaults |
-| `salesforge-sequence-creator` | `/salesforge-sequence` | **Main pipeline:** paste copy → spam fix → spintax → push to Salesforge via MCP |
-
-**Everything else (contacts, enrollment, deliverability, sender profiles) is handled natively by the Salesforge MCP tools** — no custom skills needed.
-
-## How It Works
+## What's Inside
 
 ```
-1. Paste email copy into Claude Code
-2. /salesforge-sequence processes it:
-   Parse → Spintax → Spam Check → Spam Fix → Variables → HTML → Validate
-3. You review the approval gate
-4. MCP pushes to Salesforge: create sequence → add nodes → set schedule → attach senders
-5. Sequence appears in DRAFT — you launch manually
+├── salesforge-reference/SKILL.md      → Claude Code skill: API rules + traps
+├── salesforge-sequence-creator/SKILL.md → Claude Code skill: paste copy → sequence
+├── launcher.py                         → Create 50 sequences from campaign files
+├── attach.py                           → Attach senders + enroll contacts to all sequences
+└── examples/                           → Sample campaigns + contact CSV
 ```
 
-## Requires
+## Quick Start
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
-- Salesforge MCP server configured in Claude Code — [setup guide](https://help.salesforge.ai/en/articles/10333582-salesforge-mcp-server-connect-with-ai-assistants)
-- Salesforge API key (Settings → Integrations → API Key)
-
-## Installation
+### 1. Install the Claude Code skills
 
 ```bash
-git clone https://github.com/ajurkev/revsculpt-salesforge-secret-sauce.git
-cp -r revsculpt-salesforge-secret-sauce/salesforge-* ~/.claude/skills/
+git clone https://github.com/ajurkev/salesforge-secret-sauce-by-revsculpt.git
+cd salesforge-secret-sauce-by-revsculpt
+cp -r salesforge-reference salesforge-sequence-creator ~/.claude/skills/
 ```
 
-## Key Traps Documented
+### 2. Connect Salesforge MCP
 
-Things the Swagger docs don't tell you — all solved in the reference skill:
+Follow the [Salesforge MCP setup guide](https://help.salesforge.ai/en/articles/10333582-salesforge-mcp-server-connect-with-ai-assistants) to connect your Salesforge account to Claude Code.
 
-1. **`metadata.message`** not `body` — email body field is nested, silent failure if wrong
+### 3. Use interactively (one campaign at a time)
+
+In Claude Code, type `/salesforge-sequence` and paste your email copy. It will:
+- Generate spintax (3 variants per sentence)
+- Check for spam words
+- Convert to Salesforge format (`{{double_braces}}` variables)
+- Push to Salesforge via MCP
+- Sequence lands in **DRAFT** — you launch manually
+
+### 4. Use the launcher (50 campaigns at once)
+
+```bash
+# Create your campaign files (see examples/ for format)
+# Then run:
+python3 launcher.py --key YOUR_SALESFORGE_API_KEY --workspace YOUR_WORKSPACE_ID
+
+# After sequences are created, attach senders + enroll contacts:
+python3 attach.py --key YOUR_SALESFORGE_API_KEY --workspace YOUR_WORKSPACE_ID --sender-profile-id YOUR_SENDER_ID
+```
+
+## Campaign File Format
+
+Each `.txt` file in your campaigns folder defines a multichannel sequence:
+
+```
+--- STEP 1: EMAIL (Day 0) ---
+Subject: {{first_name}}, compliance at {{company}}
+Body: Your email body here with {{company}} variables.
+
+--- STEP 2: EMAIL FOLLOW-UP (Day 3) ---
+Subject: {{first_name}}, compliance at {{company}}
+Body: Follow-up body here.
+
+--- STEP 3: LINKEDIN VIEW PROFILE (Day 4) ---
+(no message)
+
+--- STEP 4: LINKEDIN CONNECTION REQUEST (Day 5) ---
+Message: {{first_name}}, I work with companies like {{company}}...
+
+--- STEP 5: LINKEDIN MESSAGE (Day 7) ---
+Message: Thanks for connecting, {{first_name}}...
+
+--- STEP 6: LINKEDIN FOLLOW-UP (Day 10) ---
+Message: Last note on this, {{first_name}}...
+```
+
+## Key Traps (Already Solved)
+
+1. **`metadata.message`** — email body is nested, not flat. Wrong field = blank emails, no error
 2. **Integer IDs** — `actionId`, `branchId`, `senderProfileIds` are integers, not strings
-3. **`{{double_braces}}`** for variables — `{{first_name}}`, NOT `{first_name}`
-4. **Branch chaining** — each new node creates a new branch, must re-fetch before adding next node
+3. **`{{double_braces}}`** — variables use `{{first_name}}`, NOT `{first_name}`
+4. **Branch chaining** — each node creates a new branch. Re-fetch before adding next node
 5. **`waitDays` vs `wait_in_minutes`** — create uses days, update uses minutes
-6. **Schedule disabled days** — `"from": 0, "to": 0` returns 422, use `"to": 23`
-7. **Two APIs** — Core API uses `limit+offset`, Multichannel uses `page+limit`
+6. **Schedule disabled days** — `from:0, to:0` → 422 error. Use `to:23`
 
-## Salesforge MCP Tools Used
+## Variables
 
-| MCP Tool | What It Does |
-|----------|-------------|
-| `get_me` | Validate API key |
-| `list_workspaces` | Find workspace ID |
-| `bulk_create_contacts` | Upload contacts (up to 100/call) |
-| `create_sequence` | Create sequence in DRAFT |
-| `list_sequence_branches` | Get branch ID for node chaining |
-| `create_action_node` | Add email/LinkedIn step |
-| `update_action_node` | Fix copy or variables post-creation |
-| `update_sequence_schedule` | Set Mon-Fri, 8-17 |
-| `update_sequence_settings` | Plain text, no tracking |
-| `list_sender_profiles` | Find sender IDs |
-| `assign_sender_profiles_to_sequence` | Attach senders |
-| `enroll_contacts` | Enroll contacts into sequence |
+| Field | Format |
+|---|---|
+| First name | `{{first_name}}` |
+| Last name | `{{last_name}}` |
+| Company | `{{company}}` |
+| Email | `{{email}}` |
+| Job title | `{{job_title}}` |
+| Custom | `{{your_custom_var}}` |
+
+## Action IDs
+
+| ID | Channel | Action |
+|---|---|---|
+| 1 | LinkedIn | Connection request |
+| 2 | LinkedIn | Send message |
+| 3 | Email | Send email |
+| 4 | LinkedIn | View profile |
+| 6 | LinkedIn | Like latest post |
+| 7 | LinkedIn | Follow profile |
+| 8 | LinkedIn | Send InMail |
 
 ## License
 
